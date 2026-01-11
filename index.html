@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Game v3.0 (Menu & Smart UI)</title>
+    <style>
+        /* --- CSS (Стили) --- */
+        :root {
+            --bg-color: #0d1117;
+            --nav-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --bit-off: #30363d;
+            --bit-on: #238636;
+            --target-bg: #1f6feb;
+            --danger: #da3633;
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* --- НАВИГАЦИЯ (Меню) --- */
+        nav {
+            width: 100%;
+            background-color: var(--nav-bg);
+            padding: 10px 0;
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid #30363d;
+            margin-bottom: 20px;
+        }
+
+        .nav-container {
+            width: 620px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Выпадающее меню */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--font-main);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #21262d;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 100;
+            border-radius: 5px;
+            border: 1px solid #30363d;
+        }
+
+        .dropdown-content a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown:hover .dropbtn { opacity: 0.9; }
+
+        .nav-link {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .nav-link:hover { color: var(--accent-color); }
+
+        /* --- ИГРОВОЕ ПОЛЕ --- */
+        #game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 620px;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        #game-board {
+            display: flex;
+            flex-direction: column-reverse; /* Новые строки снизу, старые ползут вверх */
+            width: 640px; /* Чуть шире для отступов */
+            height: 550px;
+            border: 2px solid var(--text-color);
+            background-color: #161b22;
+            padding: 10px;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        /* Анимация тревоги */
+        @keyframes dangerPulse {
+            0% { box-shadow: 0 0 10px transparent; border-color: var(--text-color); background-color: #161b22; }
+            50% { box-shadow: 0 0 30px var(--danger); border-color: var(--danger); background-color: #2a0e0e; }
+            100% { box-shadow: 0 0 10px transparent; border-color: var(--text-color); background-color: #161b22; }
+        }
+        .danger-mode { animation: dangerPulse 1s infinite; }
+
+        .row {
+            display: flex;
+            align-items: center; /* Центрирование по вертикали */
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .target-number {
+            width: 60px;
+            height: 40px;
+            background-color: var(--target-bg);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            border-radius: 4px;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+
+        .bits-container { display: flex; gap: 8px; }
+
+        /* Обертка для бита и его подписи */
+        .bit-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bit {
+            width: 40px;
+            height: 40px;
+            background-color: var(--bit-off);
+            border: 2px solid #555;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border-radius: 4px;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .bit:active { transform: scale(0.95); }
+
+        .bit.active {
+            background-color: var(--bit-on);
+            border-color: #4dda60;
+            box-shadow: 0 0 8px #4dda60;
+        }
+
+        /* Подпись под кнопкой (1, 2, 4...) */
+        .bit-label {
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: #6e7681;
+        }
+
+        .current-sum { 
+            width: 50px; 
+            text-align: center; 
+            color: #8b949e; 
+            font-size: 1.2rem;
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--danger);
+            font-size: 2rem;
+            display: none;
+            z-index: 10;
+        }
+
+        .start-btn-big {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .start-btn-big:hover { filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-container">
+            <div class="dropdown">
+                <button class="dropbtn">Игра ▼</button>
+                <div class="dropdown-content">
+                    <a href="index.html">На счет (Стандарт)</a>
+                    <a href="time.html">На время</a>
+                </div>
+            </div>
+            <a class="nav-link" onclick="alert('Таблица лидеров: Вы пока топ-1!')">Таблица лидеров</a>
+            <a class="nav-link" onclick="alert('Обучение: Нажимай на биты (0/1), чтобы сумма равнялась синему числу.')">Обучение</a>
+        </div>
+    </nav>
+    
+    <div id="game-info">
+        <span>Режим: <span id="mode-display" style="color: var(--accent-color)">На счет</span></span>
+        <span>Счет: <span id="score">0</span></span>
+    </div>
+
+    <div id="game-board">
+        <div id="game-over-screen" class="game-over-overlay">
+            <div style="margin-bottom: 20px;">GAME OVER</div>
+            <div style="font-size: 1rem; color: white; margin-bottom: 20px;">Итоговый счет: <span id="final-score">0</span></div>
+            <button class="start-btn-big" onclick="startGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <button id="start-btn" class="start-btn-big" onclick="startGame()">Начать игру</button>
+
+    <script>
+        /* --- JavaScript --- */
+        
+        const board = document.getElementById('game-board');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('final-score');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startBtn = document.getElementById('start-btn');
+        const modeDisplay = document.getElementById('mode-display');
+        
+        // Переменные состояния
+        let gameInterval;
+        let spawnRate = 3000;
+        let score = 0;
+        let isPlaying = false;
+        let gameMode = 'score'; // 'score' или 'time' (задел на будущее)
+        
+        const maxRows = 8; 
+        const dangerThreshold = 6; 
+
+        // --- ЗВУКИ ---
+        const sounds = {
+            bit: new Audio('click.mp3'), // Замените на ваши файлы или data-uri
+            success: new Audio('success.mp3'),
+            gameOver: new Audio('gameover.mp3'),
+            warning: new Audio('warning.mp3')
+        };
+
+        // Настройка звуков
+        sounds.warning.loop = true; 
+        sounds.warning.volume = 0.4; // Сделали потише, чтобы не глушило клики
+
+        function playSound(name) {
+            try {
+                if (!sounds[name]) return;
+                
+                // Если это клик или успех, клонируем (чтобы можно было быстро кликать)
+                // или сбрасываем время
+                if (name === 'bit' || name === 'success') {
+                    const s = sounds[name].cloneNode(); 
+                    s.volume = 0.6;
+                    s.play().catch(() => {});
+                } else if (name === 'gameOver') {
+                    sounds[name].play().catch(() => {});
+                } else if (name === 'warning') {
+                    // Warning управляется отдельно
+                    if (sounds.warning.paused) {
+                        sounds.warning.play().catch(() => {});
+                    }
+                }
+            } catch (e) { console.log('Sound error', e); }
+        }
+
+        function stopWarning() {
+            board.classList.remove('danger-mode');
+            sounds.warning.pause();
+            sounds.warning.currentTime = 0;
+        }
+
+        // --- ЛОГИКА СЛОЖНОСТИ ---
+        // Возвращает максимальное число в зависимости от счета
+        function getDifficultyMax(currentScore) {
+            // Начало: только 4 бита (числа до 15)
+            if (currentScore < 50) return 15; 
+            // Середина: 6 бит (числа до 63)
+            if (currentScore < 150) return 63;
+            // Хардкор: 8 бит (числа до 255)
+            return 255; 
+        }
+
+        function getRandomInt(max) {
+            return Math.floor(Math.random() * max) + 1;
+        }
+
+        function switchMode(mode) {
+            gameMode = mode;
+            modeDisplay.innerText = mode === 'score' ? "На счет" : "На время";
+            // Сброс игры при смене режима
+            isPlaying = false;
+            clearInterval(gameInterval);
+            board.innerHTML = '';
+            board.appendChild(gameOverScreen);
+            gameOverScreen.style.display = 'none';
+            startBtn.style.display = 'block';
+            stopWarning();
+            score = 0;
+            scoreEl.innerText = '0';
+        }
+
+        function startGame() {
+            stopWarning();
+            score = 0;
+            spawnRate = 3000;
+            scoreEl.innerText = score;
+            
+            board.innerHTML = ''; 
+            board.appendChild(gameOverScreen);
+            gameOverScreen.style.display = 'none';
+            startBtn.style.display = 'none';
+            isPlaying = true;
+
+            // Сразу создаем первую строку
+            createRow();
+            
+            clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, spawnRate);
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            
+            const rows = document.querySelectorAll('.row');
+            
+            // Проверка проигрыша
+            if (rows.length >= maxRows) {
+                endGame();
+                return;
+            }
+            
+            // Проверка опасности (сирены)
+            if (rows.length >= dangerThreshold) {
+                if (!board.classList.contains('danger-mode')) {
+                    board.classList.add('danger-mode');
+                    playSound('warning');
+                }
+            }
+            
+            createRow();
+        }
+
+        function createRow() {
+            const maxVal = getDifficultyMax(score);
+            const target = getRandomInt(maxVal);
+            
+            const rowDiv = document.createElement('div');
+            rowDiv.classList.add('row');
+            rowDiv.dataset.target = target;
+            
+            // Цель (синий квадрат)
+            const targetDiv = document.createElement('div');
+            targetDiv.classList.add('target-number');
+            targetDiv.innerText = target;
+
+            // Контейнер битов
+            const bitsContainer = document.createElement('div');
+            bitsContainer.classList.add('bits-container');
+
+            // Генерация битов (8 штук, но визуально неактивные будем скрывать или оставлять?)
+            // Оставим все 8 для красоты структуры, но логика 15 использует только правые 4.
+            // Твой запрос был "усложнялись по мере игры". 
+            // Чтобы не путать игрока, можно просто генерировать стандартные 8 бит,
+            // но математика будет требовать только младшие.
+            const bitValues = [128, 64, 32, 16, 8, 4, 2, 1];
+            
+            bitValues.forEach(val => {
+                // Обертка для выравнивания подписи
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bit-wrapper';
+
+                const bit = document.createElement('div');
+                bit.classList.add('bit');
+                bit.innerText = '0';
+                bit.dataset.val = val;
+                bit.onclick = () => toggleBit(bit, rowDiv);
+
+                // Если уровень сложности низкий, можно визуально "гасить" старшие биты
+                // Но для единообразия интерфейса оставим их кликабельными, просто они не нужны для суммы <= 15
+                
+                const label = document.createElement('span');
+                label.className = 'bit-label';
+                label.innerText = val;
+
+                wrapper.appendChild(bit);
+                wrapper.appendChild(label);
+                bitsContainer.appendChild(wrapper);
+            });
+
+            const sumDiv = document.createElement('div');
+            sumDiv.classList.add('current-sum');
+            sumDiv.innerText = '0';
+
+            rowDiv.appendChild(targetDiv);
+            rowDiv.appendChild(bitsContainer);
+            rowDiv.appendChild(sumDiv);
+
+            // Вставляем сверху (так как flex-direction: column-reverse, в DOM это первый ребенок)
+            board.insertBefore(rowDiv, board.firstChild);
+        }
+
+        function toggleBit(bitElement, rowElement) {
+            if (!isPlaying) return;
+
+            playSound('bit'); // Звук клика (теперь не прерывает сирену)
+
+            const isActive = bitElement.classList.contains('active');
+            if (isActive) {
+                bitElement.classList.remove('active');
+                bitElement.innerText = '0';
+            } else {
+                bitElement.classList.add('active');
+                bitElement.innerText = '1';
+            }
+
+            checkRow(rowElement);
+        }
+
+        function checkRow(rowElement) {
+            const bits = rowElement.querySelectorAll('.bit');
+            let currentSum = 0;
+
+            bits.forEach(bit => {
+                if (bit.classList.contains('active')) {
+                    currentSum += parseInt(bit.dataset.val);
+                }
+            });
+
+            const sumDisplay = rowElement.querySelector('.current-sum');
+            sumDisplay.innerText = currentSum;
+
+            if (currentSum === parseInt(rowElement.dataset.target)) {
+                sumDisplay.style.color = '#4dda60'; // Зеленый цвет при совпадении
+                solveRow(rowElement);
+            } else {
+                sumDisplay.style.color = '#8b949e';
+            }
+        }
+
+        function solveRow(rowElement) {
+            playSound('success');
+
+            rowElement.style.backgroundColor = 'rgba(35, 134, 54, 0.5)';
+            rowElement.style.transform = 'scale(1.02)';
+            
+            // Удаляем слушатели событий, чтобы нельзя было кликать пока исчезает
+            const bits = rowElement.querySelectorAll('.bit');
+            bits.forEach(b => b.onclick = null);
+
+            setTimeout(() => {
+                if (rowElement.parentNode) {
+                    rowElement.parentNode.removeChild(rowElement);
+                }
+                
+                updateScore();
+                checkDangerState(); // Проверяем, нужно ли выключить сирену
+
+            }, 200);
+        }
+
+        function checkDangerState() {
+            const rows = document.querySelectorAll('.row');
+            if (rows.length < dangerThreshold) {
+                stopWarning();
+            }
+        }
+
+        function updateScore() {
+            score += 10;
+            scoreEl.innerText = score;
+            
+            // Ускорение игры
+            if (score % 50 === 0 && spawnRate > 800) {
+                spawnRate -= 150;
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, spawnRate);
+            }
+        }
+
+        function endGame() {
+            playSound('gameOver'); 
+            stopWarning();
+            
+            isPlaying = false;
+            clearInterval(gameInterval);
+            finalScoreEl.innerText = score;
+            gameOverScreen.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>

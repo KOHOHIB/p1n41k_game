@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Game v3.0 (Time Mode)</title>
+    <style>
+        /* --- CSS (Полностью из твоего оригинала) --- */
+        :root {
+            --bg-color: #0d1117;
+            --nav-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #9e8f0a;
+            --bit-off: #30363d;
+            --bit-on: #238636;
+            --target-bg: #1f6feb;
+            --danger: #da3633;
+            --font-main: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        nav {
+            width: 100%;
+            background-color: var(--nav-bg);
+            padding: 10px 0;
+            display: flex;
+            justify-content: center;
+            border-bottom: 1px solid #30363d;
+            margin-bottom: 20px;
+        }
+
+        .nav-container {
+            width: 620px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--font-main);
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #21262d;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+            z-index: 100;
+            border-radius: 5px;
+            border: 1px solid #30363d;
+        }
+
+        .dropdown-content a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .dropdown:hover .dropdown-content { display: block; }
+        .nav-link {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .nav-link:hover { color: var(--accent-color); }
+
+        #game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 620px;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        #game-board {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 640px;
+            height: 550px;
+            border: 2px solid var(--text-color);
+            background-color: #161b22;
+            padding: 10px;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes dangerPulse {
+            0% { box-shadow: 0 0 10px transparent; border-color: var(--text-color); background-color: #161b22; }
+            50% { box-shadow: 0 0 30px var(--danger); border-color: var(--danger); background-color: #2a0e0e; }
+            100% { box-shadow: 0 0 10px transparent; border-color: var(--text-color); background-color: #161b22; }
+        }
+        .danger-mode { animation: dangerPulse 1s infinite; }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            animation: slideUp 0.3s ease-out;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .target-number {
+            width: 60px; height: 40px;
+            background-color: var(--target-bg);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; border-radius: 4px; margin-right: 15px; font-weight: bold;
+        }
+
+        .bits-container { display: flex; gap: 8px; }
+        .bit-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .bit {
+            width: 40px; height: 40px;
+            background-color: var(--bit-off);
+            border: 2px solid #555;
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer; border-radius: 4px;
+            user-select: none; transition: transform 0.1s;
+        }
+        .bit:active { transform: scale(0.95); }
+        .bit.active {
+            background-color: var(--bit-on);
+            border-color: #4dda60;
+            box-shadow: 0 0 8px #4dda60;
+        }
+        .bit-label { margin-top: 4px; font-size: 0.75rem; color: #6e7681; }
+        .current-sum { width: 50px; text-align: center; color: #8b949e; font-size: 1.2rem; }
+
+        .game-over-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--danger); font-size: 2rem; display: none; z-index: 10;
+        }
+
+        .start-btn-big {
+            padding: 15px 40px; font-size: 1.5rem;
+            background-color: var(--accent-color);
+            border: none; border-radius: 5px; color: white;
+            cursor: pointer; margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-container">
+            <div class="dropdown">
+                <button class="dropbtn">Игра ▼</button>
+                <div class="dropdown-content">
+                    <a href="index.html">На счет (Стандарт)</a>
+                    <a href="time.html">На время</a>
+                </div>
+            </div>
+            <a class="nav-link" onclick="alert('Вы лучший в выживании!')">Таблица лидеров</a>
+            <a class="nav-link" onclick="alert('Режим времени: Продержись как можно дольше!')">Обучение</a>
+        </div>
+    </nav>
+    
+    <div id="game-info">
+        <span>Режим: <span id="mode-display" style="color: var(--accent-color)">На время</span></span>
+        <span>Время: <span id="timer">00:00</span></span>
+    </div>
+
+    <div id="game-board">
+        <div id="game-over-screen" class="game-over-overlay">
+            <div style="margin-bottom: 20px;">GAME OVER</div>
+            <div style="font-size: 1rem; color: white; margin-bottom: 20px;">Время выживания: <span id="final-time">00:00</span></div>
+            <button class="start-btn-big" onclick="startGame()">Играть снова</button>
+        </div>
+    </div>
+
+    <button id="start-btn" class="start-btn-big" onclick="startGame()">Начать игру</button>
+
+    <script>
+        /* --- JavaScript (Восстановленная логика из твоего файла) --- */
+        
+        const board = document.getElementById('game-board');
+        const timerEl = document.getElementById('timer');
+        const finalTimeEl = document.getElementById('final-time');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const startBtn = document.getElementById('start-btn');
+        
+        let gameInterval;
+        let clockInterval;
+        let seconds = 0;
+        let spawnRate = 3000;
+        let isPlaying = false;
+        
+        const maxRows = 8; 
+        const dangerThreshold = 6; 
+
+        // --- ЗВУКИ (Восстановлены) ---
+        const sounds = {
+            bit: new Audio('click.mp3'),
+            success: new Audio('success.mp3'),
+            gameOver: new Audio('gameover.mp3'),
+            warning: new Audio('warning.mp3')
+        };
+        sounds.warning.loop = true; 
+        sounds.warning.volume = 0.4;
+
+        function playSound(name) {
+            try {
+                if (!sounds[name]) return;
+                if (name === 'bit' || name === 'success') {
+                    const s = sounds[name].cloneNode(); 
+                    s.volume = 0.6;
+                    s.play().catch(() => {});
+                } else if (name === 'gameOver') {
+                    sounds[name].play().catch(() => {});
+                } else if (name === 'warning') {
+                    if (sounds.warning.paused) sounds.warning.play().catch(() => {});
+                }
+            } catch (e) {}
+        }
+
+        function stopWarning() {
+            board.classList.remove('danger-mode');
+            sounds.warning.pause();
+            sounds.warning.currentTime = 0;
+        }
+
+        function updateClock() {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            timerEl.innerText = `${mins}:${secs}`;
+            
+            // Постепенное ускорение каждые 15 секунд
+            if (seconds % 15 === 0 && spawnRate > 900) {
+                spawnRate -= 150;
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, spawnRate);
+            }
+        }
+
+        function startGame() {
+            stopWarning();
+            seconds = 0;
+            spawnRate = 3000;
+            timerEl.innerText = "00:00";
+            
+            board.innerHTML = ''; 
+            board.appendChild(gameOverScreen);
+            gameOverScreen.style.display = 'none';
+            startBtn.style.display = 'none';
+            isPlaying = true;
+
+            createRow();
+            
+            clearInterval(gameInterval);
+            clearInterval(clockInterval);
+            gameInterval = setInterval(gameLoop, spawnRate);
+            clockInterval = setInterval(updateClock, 1000);
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            const rows = document.querySelectorAll('.row');
+            
+            if (rows.length >= maxRows) {
+                endGame();
+                return;
+            }
+            
+            if (rows.length >= dangerThreshold) {
+                if (!board.classList.contains('danger-mode')) {
+                    board.classList.add('danger-mode');
+                    playSound('warning');
+                }
+            }
+            createRow();
+        }
+
+        function createRow() {
+            // В режиме времени используем нарастающую сложность от времени
+            let maxVal = seconds < 30 ? 15 : (seconds < 60 ? 63 : 255);
+            const target = Math.floor(Math.random() * maxVal) + 1;
+            
+            const rowDiv = document.createElement('div');
+            rowDiv.classList.add('row');
+            rowDiv.dataset.target = target;
+            
+            const targetDiv = document.createElement('div');
+            targetDiv.classList.add('target-number');
+            targetDiv.innerText = target;
+
+            const bitsContainer = document.createElement('div');
+            bitsContainer.classList.add('bits-container');
+            const bitValues = [128, 64, 32, 16, 8, 4, 2, 1];
+            
+            bitValues.forEach(val => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bit-wrapper';
+                const bit = document.createElement('div');
+                bit.classList.add('bit');
+                bit.innerText = '0';
+                bit.dataset.val = val;
+                bit.onclick = () => toggleBit(bit, rowDiv);
+                const label = document.createElement('span');
+                label.className = 'bit-label';
+                label.innerText = val;
+                wrapper.appendChild(bit);
+                wrapper.appendChild(label);
+                bitsContainer.appendChild(wrapper);
+            });
+
+            const sumDiv = document.createElement('div');
+            sumDiv.classList.add('current-sum');
+            sumDiv.innerText = '0';
+
+            rowDiv.appendChild(targetDiv);
+            rowDiv.appendChild(bitsContainer);
+            rowDiv.appendChild(sumDiv);
+            board.insertBefore(rowDiv, board.firstChild);
+        }
+
+        function toggleBit(bitElement, rowElement) {
+            if (!isPlaying) return;
+            playSound('bit');
+            bitElement.classList.toggle('active');
+            bitElement.innerText = bitElement.classList.contains('active') ? '1' : '0';
+            checkRow(rowElement);
+        }
+
+        function checkRow(rowElement) {
+            const bits = rowElement.querySelectorAll('.bit');
+            let currentSum = 0;
+            bits.forEach(bit => {
+                if (bit.classList.contains('active')) currentSum += parseInt(bit.dataset.val);
+            });
+
+            const sumDisplay = rowElement.querySelector('.current-sum');
+            sumDisplay.innerText = currentSum;
+
+            if (currentSum === parseInt(rowElement.dataset.target)) {
+                sumDisplay.style.color = '#4dda60';
+                solveRow(rowElement);
+            }
+        }
+
+        function solveRow(rowElement) {
+            playSound('success');
+            rowElement.style.backgroundColor = 'rgba(35, 134, 54, 0.5)';
+            rowElement.style.transform = 'scale(1.02)';
+            
+            const bits = rowElement.querySelectorAll('.bit');
+            bits.forEach(b => b.onclick = null);
+
+            setTimeout(() => {
+                if (rowElement.parentNode) rowElement.parentNode.removeChild(rowElement);
+                if (document.querySelectorAll('.row').length < dangerThreshold) stopWarning();
+            }, 200);
+        }
+
+        function endGame() {
+            playSound('gameOver'); 
+            stopWarning();
+            isPlaying = false;
+            clearInterval(gameInterval);
+            clearInterval(clockInterval);
+            finalTimeEl.innerText = timerEl.innerText;
+            gameOverScreen.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
